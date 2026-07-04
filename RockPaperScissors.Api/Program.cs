@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using Npgsql;
+using RockPaperScissors.Api.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Services.AddSingleton(sp =>
 
 builder.Services.AddSingleton(NpgsqlDataSource.Create(builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException("Missing connection string 'Postgres'")));
+builder.Services.AddSingleton<IMatchEventRepository, MatchEventRepository>();
 
 var app = builder.Build();
 

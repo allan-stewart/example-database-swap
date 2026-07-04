@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using Npgsql;
 using RockPaperScissors.Api.Domain;
+using RockPaperScissors.Api.Repositories;
 
 [ApiController]
 [Route("/matches")]
-public class MatchesController(IMongoDatabase database, NpgsqlDataSource postgres) : ControllerBase
+public class MatchesController(IMongoDatabase database, IMatchEventRepository matchEventRepository) : ControllerBase
 {
     private readonly IMongoCollection<Match> matchCollection = database.GetCollection<Match>("matches");
     private readonly IMongoCollection<Player> playerCollection = database.GetCollection<Player>("players");
@@ -83,22 +83,9 @@ public class MatchesController(IMongoDatabase database, NpgsqlDataSource postgre
                     ThrowIndex = index,
                     Thrown = gameThrows.LoserPlayerThrow
                 }
-            });
+            }).ToList();
 
-            await using var connection = await postgres.OpenConnectionAsync();
-            await using var transaction = await connection.BeginTransactionAsync();
-            foreach (var matchEvent in matchEvents)
-            {
-                await using var command = new NpgsqlCommand(
-                    "INSERT INTO match_event_log (match_id, player_id, throw_index, thrown) VALUES (@matchId, @playerId, @throwIndex, @thrown)",
-                    connection, transaction);
-                command.Parameters.AddWithValue("matchId", matchEvent.MatchId);
-                command.Parameters.AddWithValue("playerId", matchEvent.PlayerId);
-                command.Parameters.AddWithValue("throwIndex", matchEvent.ThrowIndex);
-                command.Parameters.AddWithValue("thrown", matchEvent.Thrown);
-                await command.ExecuteNonQueryAsync();
-            }
-            await transaction.CommitAsync();
+            await matchEventRepository.AddAsync(matchEvents);
         }
 
         return Created($"/matches/{match.MatchId}", match);
@@ -120,25 +107,7 @@ public class MatchesController(IMongoDatabase database, NpgsqlDataSource postgre
             return NotFound();
         }
 
-        var matchEvents = new List<MatchEvent>();
-        await using var connection = await postgres.OpenConnectionAsync();
-        await using var command = new NpgsqlCommand(
-            "SELECT match_event_id, match_id, player_id, throw_index, thrown FROM match_event_log WHERE match_id = @matchId ORDER BY throw_index, match_event_id",
-            connection);
-        command.Parameters.AddWithValue("matchId", id);
-        await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            matchEvents.Add(new MatchEvent
-            {
-                MatchEventId = reader.GetInt64(0),
-                MatchId = reader.GetGuid(1),
-                PlayerId = reader.GetGuid(2),
-                ThrowIndex = reader.GetInt32(3),
-                Thrown = reader.GetString(4)
-            });
-        }
-
+        var matchEvents = await matchEventRepository.GetByMatchAsync(id);
         return Ok(matchEvents);
     }
 }

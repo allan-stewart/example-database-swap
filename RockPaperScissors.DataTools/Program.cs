@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using Npgsql;
+using RockPaperScissors.Api.Repositories;
 using RockPaperScissors.DataTools;
 
 var mongoConnection = Environment.GetEnvironmentVariable("MONGO_CONNECTION")
@@ -20,7 +21,7 @@ switch (args.FirstOrDefault())
         var mongoUrl = new MongoUrl(mongoConnection);
         var mongo = new MongoClient(mongoUrl).GetDatabase(mongoUrl.DatabaseName ?? "rockpaperscissors");
         await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new Seeder(mongo, postgres).RunAsync();
+        await new Seeder(mongo, new MatchEventRepository(postgres)).RunAsync();
         return 0;
     }
     case "teardown":

@@ -1,10 +1,10 @@
 using MongoDB.Driver;
-using Npgsql;
 using RockPaperScissors.Api.Domain;
+using RockPaperScissors.Api.Repositories;
 
 namespace RockPaperScissors.DataTools;
 
-public class Seeder(IMongoDatabase mongo, NpgsqlDataSource postgres)
+public class Seeder(IMongoDatabase mongo, IMatchEventRepository matchEventRepository)
 {
     private static readonly DateTimeOffset BaseTime = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -69,26 +69,7 @@ public class Seeder(IMongoDatabase mongo, NpgsqlDataSource postgres)
             new() { MatchId = matchWithThrows.MatchId, PlayerId = matchWithThrows.LoserPlayerId, ThrowIndex = 2, Thrown = "scissors" }
         };
 
-        await using var connection = await postgres.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
-        await using (var delete = new NpgsqlCommand(
-            "DELETE FROM match_event_log WHERE match_id = @matchId", connection, transaction))
-        {
-            delete.Parameters.AddWithValue("matchId", matchWithThrows.MatchId);
-            await delete.ExecuteNonQueryAsync();
-        }
-        foreach (var matchEvent in matchEvents)
-        {
-            await using var insert = new NpgsqlCommand(
-                "INSERT INTO match_event_log (match_id, player_id, throw_index, thrown) VALUES (@matchId, @playerId, @throwIndex, @thrown)",
-                connection, transaction);
-            insert.Parameters.AddWithValue("matchId", matchEvent.MatchId);
-            insert.Parameters.AddWithValue("playerId", matchEvent.PlayerId);
-            insert.Parameters.AddWithValue("throwIndex", matchEvent.ThrowIndex);
-            insert.Parameters.AddWithValue("thrown", matchEvent.Thrown);
-            await insert.ExecuteNonQueryAsync();
-        }
-        await transaction.CommitAsync();
+        await matchEventRepository.AddAsync(matchEvents);
         Console.WriteLine($"Seeded {matchEvents.Count} match events.");
     }
 

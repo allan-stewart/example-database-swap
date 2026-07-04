@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using Npgsql;
 using RockPaperScissors.Api.Domain;
+using RockPaperScissors.Api.Repositories;
 
 [ApiController]
 [Route("/players")]
-public class PlayerController(IMongoDatabase database, NpgsqlDataSource postgres) : ControllerBase
+public class PlayerController(IMongoDatabase database, IMatchEventRepository matchEventRepository) : ControllerBase
 {
     private readonly IMongoCollection<Player> playerCollection = database.GetCollection<Player>("players");
     private readonly IMongoCollection<Match> matchCollection = database.GetCollection<Match>("matches");
@@ -73,18 +73,7 @@ public class PlayerController(IMongoDatabase database, NpgsqlDataSource postgres
             return NotFound();
         }
 
-        var throwCounts = new Dictionary<string, long>();
-        await using var connection = await postgres.OpenConnectionAsync();
-        await using var command = new NpgsqlCommand(
-            "SELECT thrown, COUNT(*) FROM match_event_log WHERE player_id = @playerId GROUP BY thrown",
-            connection);
-        command.Parameters.AddWithValue("playerId", id);
-        await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            throwCounts[reader.GetString(0)] = reader.GetInt64(1);
-        }
-
+        var throwCounts = await matchEventRepository.CountThrowsByPlayerAsync(id);
         return Ok(throwCounts);
     }
 }
