@@ -6,74 +6,23 @@ namespace RockPaperScissors.DataTools;
 
 public class Seeder(IMongoDatabase mongo, IMatchEventRepository matchEventRepository)
 {
-    private static readonly DateTimeOffset BaseTime = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-
-    private static readonly string[] PlayerNames =
-    [
-        "Alice", "Bob", "Carol", "Dave", "Erin", "Frank", "Grace", "Heidi", "Ivan", "Judy", "Karen",
-        "Mallory", "Olivia", "Peggy", "Quentin", "Rupert", "Sybil", "Trent", "Ursula", "Victor"
-    ];
-
     public async Task RunAsync()
     {
-        var players = PlayerNames.Select((name, index) => new Player
-        {
-            Id = PlayerId(index + 1),
-            Name = name,
-            CreatedAt = BaseTime.AddDays(index)
-        }).ToList();
-
-        var matchWithThrows = new Match
-        {
-            MatchId = MatchId(1),
-            WinnerPlayerId = players[0].Id,
-            LoserPlayerId = players[1].Id,
-            BestOf = 3,
-            WinnerWins = 2,
-            LoserWins = 1,
-            RecordedAt = BaseTime.AddDays(25)
-        };
-        var matchWithoutThrows = new Match
-        {
-            MatchId = MatchId(2),
-            WinnerPlayerId = players[2].Id,
-            LoserPlayerId = players[3].Id,
-            BestOf = 1,
-            WinnerWins = 1,
-            LoserWins = 0,
-            RecordedAt = BaseTime.AddDays(26)
-        };
-
         var playerCollection = mongo.GetCollection<Player>("players");
-        foreach (var player in players)
+        foreach (var player in SeedData.Players)
         {
             await playerCollection.ReplaceOneAsync(p => p.Id == player.Id, player, new ReplaceOptions { IsUpsert = true });
         }
-        Console.WriteLine($"Seeded {players.Count} players.");
+        Console.WriteLine($"Seeded {SeedData.Players.Count} players.");
 
         var matchCollection = mongo.GetCollection<Match>("matches");
-        foreach (var match in new[] { matchWithThrows, matchWithoutThrows })
+        foreach (var match in SeedData.Matches)
         {
             await matchCollection.ReplaceOneAsync(m => m.MatchId == match.MatchId, match, new ReplaceOptions { IsUpsert = true });
         }
-        Console.WriteLine("Seeded 2 matches.");
+        Console.WriteLine($"Seeded {SeedData.Matches.Count} matches.");
 
-        // Alice takes throws 0 and 2; Bob takes throw 1.
-        var matchEvents = new List<MatchEvent>
-        {
-            new() { MatchId = matchWithThrows.MatchId, PlayerId = matchWithThrows.WinnerPlayerId, ThrowIndex = 0, Thrown = "rock" },
-            new() { MatchId = matchWithThrows.MatchId, PlayerId = matchWithThrows.LoserPlayerId, ThrowIndex = 0, Thrown = "scissors" },
-            new() { MatchId = matchWithThrows.MatchId, PlayerId = matchWithThrows.WinnerPlayerId, ThrowIndex = 1, Thrown = "paper" },
-            new() { MatchId = matchWithThrows.MatchId, PlayerId = matchWithThrows.LoserPlayerId, ThrowIndex = 1, Thrown = "scissors" },
-            new() { MatchId = matchWithThrows.MatchId, PlayerId = matchWithThrows.WinnerPlayerId, ThrowIndex = 2, Thrown = "rock" },
-            new() { MatchId = matchWithThrows.MatchId, PlayerId = matchWithThrows.LoserPlayerId, ThrowIndex = 2, Thrown = "scissors" }
-        };
-
-        await matchEventRepository.AddAsync(matchEvents);
-        Console.WriteLine($"Seeded {matchEvents.Count} match events.");
+        await matchEventRepository.AddAsync(SeedData.MatchEvents);
+        Console.WriteLine($"Seeded {SeedData.MatchEvents.Count} match events.");
     }
-
-    private static Guid PlayerId(int n) => new($"00000000-0000-0000-0000-{n:D12}");
-
-    private static Guid MatchId(int n) => new($"11111111-1111-1111-1111-{n:D12}");
 }
