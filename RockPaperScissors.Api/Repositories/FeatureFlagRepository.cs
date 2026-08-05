@@ -24,4 +24,18 @@ public class FeatureFlagRepository(NpgsqlDataSource postgres) : IFeatureFlagRepo
         command.Parameters.AddWithValue("enabled", enabled);
         await command.ExecuteNonQueryAsync();
     }
+
+    public async Task<Dictionary<string, bool>> GetAllAsync()
+    {
+        var flags = new Dictionary<string, bool>();
+        await using var connection = await postgres.OpenConnectionAsync();
+        await using var command = new NpgsqlCommand(
+            "SELECT name, enabled FROM feature_flags ORDER BY name", connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            flags[reader.GetString(0)] = reader.GetBoolean(1);
+        }
+        return flags;
+    }
 }
