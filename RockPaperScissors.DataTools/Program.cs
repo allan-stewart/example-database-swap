@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using Npgsql;
+using RockPaperScissors.Api.Data;
 using RockPaperScissors.Api.Repositories;
 using RockPaperScissors.DataTools;
 
@@ -23,7 +24,8 @@ switch (args.FirstOrDefault())
         var mongoUrl = new MongoUrl(mongoConnection);
         var mongo = new MongoClient(mongoUrl).GetDatabase(mongoUrl.DatabaseName ?? "rockpaperscissors");
         await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new Seeder(mongo, new MatchEventRepository(postgres), new FeatureFlagRepository(postgres)).RunAsync();
+        var postgresGateway = new DapperPostgres(postgres);
+        await new Seeder(mongo, new MatchEventRepository(postgresGateway), new FeatureFlagRepository(postgresGateway)).RunAsync();
         return 0;
     }
     case "teardown":
@@ -51,7 +53,7 @@ switch (args.FirstOrDefault())
         }
         var enabled = args[0] == "enable-flag";
         await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new FeatureFlagRepository(postgres).SetAsync(flagName, enabled);
+        await new FeatureFlagRepository(new DapperPostgres(postgres)).SetAsync(flagName, enabled);
         Console.WriteLine($"{(enabled ? "Enabled" : "Disabled")} flag '{flagName}'.");
         return 0;
     }
