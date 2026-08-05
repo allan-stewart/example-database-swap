@@ -23,7 +23,7 @@ switch (args.FirstOrDefault())
         var mongoUrl = new MongoUrl(mongoConnection);
         var mongo = new MongoClient(mongoUrl).GetDatabase(mongoUrl.DatabaseName ?? "rockpaperscissors");
         await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new Seeder(mongo, new MatchEventRepository(postgres)).RunAsync();
+        await new Seeder(mongo, new MatchEventRepository(postgres), new FeatureFlagRepository(postgres)).RunAsync();
         return 0;
     }
     case "teardown":
@@ -40,7 +40,22 @@ switch (args.FirstOrDefault())
         await new SimulateTraffic(apiClient).RunAsync();
         return 0;
     }
+    case "enable-flag":
+    case "disable-flag":
+    {
+        var flagName = args.ElementAtOrDefault(1);
+        if (string.IsNullOrWhiteSpace(flagName))
+        {
+            Console.Error.WriteLine("Usage: dotnet run -- <enable-flag|disable-flag> <name>");
+            return 1;
+        }
+        var enabled = args[0] == "enable-flag";
+        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
+        await new FeatureFlagRepository(postgres).SetAsync(flagName, enabled);
+        Console.WriteLine($"{(enabled ? "Enabled" : "Disabled")} flag '{flagName}'.");
+        return 0;
+    }
     default:
-        Console.Error.WriteLine("Usage: dotnet run -- <migrate|seed|teardown|simulate-traffic>");
+        Console.Error.WriteLine("Usage: dotnet run -- <migrate|seed|teardown|simulate-traffic|enable-flag <name>|disable-flag <name>>");
         return 1;
 }

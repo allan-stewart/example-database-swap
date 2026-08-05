@@ -15,6 +15,7 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddSingleton(NpgsqlDataSource.Create(builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException("Missing connection string 'Postgres'")));
 builder.Services.AddSingleton<IMatchEventRepository, MatchEventRepository>();
+builder.Services.AddSingleton<IFeatureFlagRepository, FeatureFlagRepository>();
 
 var app = builder.Build();
 

@@ -4,7 +4,7 @@ using RockPaperScissors.Api.Repositories;
 
 namespace RockPaperScissors.DataTools;
 
-public class Seeder(IMongoDatabase mongo, IMatchEventRepository matchEventRepository)
+public class Seeder(IMongoDatabase mongo, IMatchEventRepository matchEventRepository, IFeatureFlagRepository featureFlagRepository)
 {
     public async Task RunAsync()
     {
@@ -24,5 +24,8 @@ public class Seeder(IMongoDatabase mongo, IMatchEventRepository matchEventReposi
 
         await matchEventRepository.AddAsync(SeedData.MatchEvents);
         Console.WriteLine($"Seeded {SeedData.MatchEvents.Count} match events.");
+
+        await featureFlagRepository.SetAsync("throw-statistics", true);
+        Console.WriteLine("Seeded feature flag 'throw-statistics' = on.");
     }
 }

@@ -5,7 +5,7 @@ using RockPaperScissors.Api.Repositories;
 
 [ApiController]
 [Route("/players")]
-public class PlayerController(IMongoDatabase database, IMatchEventRepository matchEventRepository) : ControllerBase
+public class PlayerController(IMongoDatabase database, IMatchEventRepository matchEventRepository, IFeatureFlagRepository featureFlagRepository) : ControllerBase
 {
     private readonly IMongoCollection<Player> playerCollection = database.GetCollection<Player>("players");
     private readonly IMongoCollection<Match> matchCollection = database.GetCollection<Match>("matches");
@@ -67,6 +67,11 @@ public class PlayerController(IMongoDatabase database, IMatchEventRepository mat
     [HttpGet("{id:guid}/throws")]
     public async Task<IActionResult> GetThrowCounts(Guid id)
     {
+        if (!await featureFlagRepository.IsEnabledAsync("throw-statistics"))
+        {
+            return NotFound();
+        }
+
         var playerExists = await playerCollection.Find(p => p.Id == id).AnyAsync();
         if (!playerExists)
         {
