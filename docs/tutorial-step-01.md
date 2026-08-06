@@ -1,13 +1,13 @@
 # Tutorial - Step 1
 
-In this first step, our first goal is to extract all the existing MongoDB code
+Our first goal is to extract all the existing MongoDB code
 for accessing our stored `Match` data into a `MongoMatchesRepository`.
 This decouples the database logic from the rest of the application.
 
 A closely-related second goal is to introduce a desired interface (or facade)
 that abstracts the contract from the implementation.
-This will allow us to later "branch by abstraction" &mdash; a pattern for
-changing code by swapping one implementation out for another.
+This provides the hook which we can use later to "branch by abstraction"
+&mdash; a pattern for changing code by swapping one implementation for another.
 
 
 ## Creating the Repository
@@ -135,7 +135,7 @@ tables, here are a few tips to help you along the path:
 * In some cases, a join is not really necessary; you can "join" the data
   in the code after querying the separate pieces from their respective
   repositories.
-  This can help you reduce data coupling between entities.
+  This can help you reduce schema coupling between entities.
 * If joins _are_ needed across disparate entities / tables
   and you can't decide whether which entity's repository should own the join,
   consider creating a completely separate repository for it.
@@ -152,8 +152,9 @@ collection or table.
 It might take some time to marshal all of the database access into one place.
 You don't have to do it all at once.
 
-In this example, remember that you can use the `simulate-traffic` tool to run
-tests against the Api as you're making these changes:
+In this codebase, remember that you can use the `simulate-traffic` tool to make
+calls to Api as you're making these changes.
+It will log any errors it finds, helping you verify that everything is still working.
 
 ```bash
 cd RockPaperScissors.DataTools
