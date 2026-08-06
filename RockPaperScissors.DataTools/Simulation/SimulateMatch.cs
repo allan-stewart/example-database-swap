@@ -3,7 +3,7 @@ using RockPaperScissors.Api.Domain;
 
 namespace RockPaperScissors.DataTools.Simulation;
 
-public class SimulateMatch(HttpClient apiClient, GenerateMatch generateMatch, MatchTracker matchTracker, StatusConsole statusConsole)
+public class SimulateMatch(HttpClient apiClient, GenerateMatch generateMatch, MatchTracker matchTracker, WinCountExpectations winCountExpectations, StatusConsole statusConsole)
 {
     public async Task<bool> RunAsync()
     {
@@ -35,6 +35,7 @@ public class SimulateMatch(HttpClient apiClient, GenerateMatch generateMatch, Ma
             return false;
         }
         matchTracker.RecordDynamicMatch(match with { MatchId = recordedMatch.MatchId });
+        winCountExpectations.IncrementIfTracked(match.WinnerPlayerId);
         return true;
     }
 

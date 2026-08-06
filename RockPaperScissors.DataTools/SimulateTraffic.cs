@@ -6,21 +6,27 @@ public class SimulateTraffic
 {
     private readonly StatusConsole statusConsole = new();
     private readonly MatchTracker matchTracker = new();
+    private readonly WinCountExpectations winCountExpectations = new();
     private readonly SimulateMatch simulateMatch;
     private readonly VerifyMatch verifyMatch;
+    private readonly VerifyWinCount verifyWinCount;
 
     public SimulateTraffic(HttpClient apiClient)
     {
-        simulateMatch = new SimulateMatch(apiClient, new GenerateMatch(), matchTracker, statusConsole);
+        simulateMatch = new SimulateMatch(apiClient, new GenerateMatch(), matchTracker, winCountExpectations, statusConsole);
         verifyMatch = new VerifyMatch(apiClient, matchTracker, statusConsole);
+        verifyWinCount = new VerifyWinCount(apiClient, winCountExpectations, statusConsole);
     }
 
     private readonly Queue<string> commandQueue = new([
         "new-match",
         "verify-dynamic-data",
+        "verify-win-count",
         "verify-dynamic-data",
+        "verify-match-throws",
         "verify-dynamic-data",
-        "verify-static-data"
+        "verify-static-data",
+        "verify-win-count"
     ]);
 
     public async Task RunAsync()
@@ -64,6 +70,10 @@ public class SimulateTraffic
                 return await verifyMatch.VerifyDynamicMatch();
             case "verify-static-data":
                 return await verifyMatch.VerifyStaticMatch();
+            case "verify-win-count":
+                return await verifyWinCount.RunAsync();
+            case "verify-match-throws":
+                return await verifyMatch.VerifyStaticMatchThrows();
             default:
                 throw new InvalidOperationException($"Unknown command: {command}");
         }
