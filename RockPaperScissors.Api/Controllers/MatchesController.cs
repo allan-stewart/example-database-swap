@@ -5,9 +5,11 @@ using RockPaperScissors.Api.Repositories;
 
 [ApiController]
 [Route("/matches")]
-public class MatchesController(IMongoDatabase database, IMatchEventRepository matchEventRepository) : ControllerBase
+public class MatchesController(
+    IMongoDatabase database,
+    IMatchesRepository matchesRepository,
+    IMatchEventRepository matchEventRepository) : ControllerBase
 {
-    private readonly IMongoCollection<Match> matchCollection = database.GetCollection<Match>("matches");
     private readonly IMongoCollection<Player> playerCollection = database.GetCollection<Player>("players");
 
     [HttpPost]
@@ -63,7 +65,7 @@ public class MatchesController(IMongoDatabase database, IMatchEventRepository ma
             WinnerWins = request.WinnerWins,
             LoserWins = request.LoserWins
         };
-        await matchCollection.InsertOneAsync(match);
+        await matchesRepository.InsertMatchAsync(match);
 
         if (request.Throws is { Length: > 0 })
         {
@@ -94,14 +96,14 @@ public class MatchesController(IMongoDatabase database, IMatchEventRepository ma
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetMatch(Guid id)
     {
-        var match = await matchCollection.Find(m => m.MatchId == id).FirstOrDefaultAsync();
+        var match = await matchesRepository.LoadMatchByIdAsync(id);
         return match is null ? NotFound() : Ok(match);
     }
 
     [HttpGet("{id:guid}/throws")]
     public async Task<IActionResult> GetMatchThrows(Guid id)
     {
-        var matchExists = await matchCollection.Find(m => m.MatchId == id).AnyAsync();
+        var matchExists = await matchesRepository.DoesMatchExistAsync(id);
         if (!matchExists)
         {
             return NotFound();

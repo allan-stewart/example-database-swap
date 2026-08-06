@@ -5,10 +5,12 @@ using RockPaperScissors.Api.Repositories;
 
 [ApiController]
 [Route("/players")]
-public class PlayerController(IMongoDatabase database, IMatchEventRepository matchEventRepository, IFeatureFlagRepository featureFlagRepository) : ControllerBase
+public class PlayerController(IMongoDatabase database,
+    IMatchesRepository matchesRepository,
+    IMatchEventRepository matchEventRepository,
+    IFeatureFlagRepository featureFlagRepository) : ControllerBase
 {
     private readonly IMongoCollection<Player> playerCollection = database.GetCollection<Player>("players");
-    private readonly IMongoCollection<Match> matchCollection = database.GetCollection<Match>("matches");
 
     [HttpPost]
     public async Task<IActionResult> CreatePlayer([FromBody] CreatePlayerRequest request)
@@ -50,17 +52,7 @@ public class PlayerController(IMongoDatabase database, IMatchEventRepository mat
             return NotFound();
         }
 
-        var filter = Builders<Match>.Filter.Eq(m => m.WinnerPlayerId, id);
-        if (from is not null)
-        {
-            filter &= Builders<Match>.Filter.Gte(m => m.RecordedAt, from.Value);
-        }
-        if (to is not null)
-        {
-            filter &= Builders<Match>.Filter.Lt(m => m.RecordedAt, to.Value);
-        }
-
-        var wins = await matchCollection.CountDocumentsAsync(filter);
+        var wins = await matchesRepository.LoadWinCountForPlayerAsync(id, from, to);
         return Ok(new WinCountResponse(id, wins, from, to));
     }
 
