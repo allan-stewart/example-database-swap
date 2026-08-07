@@ -7,6 +7,8 @@ public class ProxyMatchesRepository(
     IFeatureFlagRepository featureFlagRepository,
     ILogger<ProxyMatchesRepository> logger) : IMatchesRepository
 {
+    private static readonly TimeSpan PostgresTimeout = TimeSpan.FromSeconds(2);
+
     public async Task<bool> DoesMatchExistAsync(Guid matchId)
     {
         return await mongo.DoesMatchExistAsync(matchId);
@@ -19,7 +21,7 @@ public class ProxyMatchesRepository(
         if (await featureFlagRepository.IsEnabledAsync("write-matches-to-postgres"))
         {
             try {
-                await postgres.InsertMatchAsync(match);
+                await postgres.InsertMatchAsync(match).WaitAsync(PostgresTimeout);
             } catch (Exception e)
             {
                 logger.LogWarning(e, "Error writing to postgres");

@@ -108,6 +108,8 @@ Next we will update the our insert (write) method so when a feature flag is turn
 we will try to also write the match to postgres and log any exceptions.
 
 ```csharp
+    private static readonly TimeSpan PostgresTimeout = TimeSpan.FromSeconds(2);
+
     public async Task InsertMatchAsync(Match match)
     {
         await mongo.InsertMatchAsync(match);
@@ -115,7 +117,7 @@ we will try to also write the match to postgres and log any exceptions.
         if (await featureFlagRepository.IsEnabledAsync("write-matches-to-postgres"))
         {
             try {
-                await postgres.InsertMatchAsync(match);
+                await postgres.InsertMatchAsync(match).WaitAsync(PostgresTimeout);
             } catch (Exception e)
             {
                 logger.LogWarning(e, "Error writing to postgres");
@@ -123,6 +125,9 @@ we will try to also write the match to postgres and log any exceptions.
         }
     }
 ```
+
+The `try..catch` will ensure that no exceptions cause problems for our Api clients.
+The `.WaitAsync(PostgresTimeout);` mitigates any long delays that might come up.
 
 
 ## Try It Out!
@@ -170,3 +175,15 @@ If there are no write errors logged, we can look in Postgres to see if we're wri
 ```bash
 docker exec rps-postgres psql -U rps -d rockpaperscissors -c "SELECT * FROM matches ORDER BY recorded_at DESC LIMIT 10;"
 ```
+
+
+## Intentionally Bad Code
+
+If you didn't run into any errors or just want to verify that the proxy repository really is safe,
+you can add some code to intentionally trigger problems.
+
+In the `PostgresMatchesRepository.InsertMatchAsync` try adding one or both of the following:
+* `await Task.Delay(30000);`
+* `throw new NotImplementedException();`
+
+You should see errors in the console, but the simulated traffic will continue on with minimal slowing.

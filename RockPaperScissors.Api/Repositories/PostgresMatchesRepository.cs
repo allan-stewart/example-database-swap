@@ -5,11 +5,11 @@ namespace RockPaperScissors.Api.Repositories;
 
 public class PostgresMatchesRepository(IPostgres postgres) : IMatchesRepository
 {
-    public Task InsertMatchAsync(Match match)
+    public async Task InsertMatchAsync(Match match)
     {
         var sql = "INSERT INTO matches (match_id, winner_player_id, loser_player_id, best_of, winner_wins, loser_wins, recorded_at) " +
             "VALUES (@MatchId, @WinnerPlayerId, @LoserPlayerId, @BestOf, @WinnerWins, @LoserWins, @RecordedAt)";
-        return postgres.ExecuteAsync(sql, match);
+        await postgres.ExecuteAsync(sql, match);
     }
 
     public async Task<Match?> LoadMatchByIdAsync(Guid matchId)
