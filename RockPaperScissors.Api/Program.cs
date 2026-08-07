@@ -19,7 +19,12 @@ builder.Services.AddSingleton(NpgsqlDataSource.Create(builder.Configuration.GetC
 builder.Services.AddSingleton<IPostgres, DapperPostgres>();
 builder.Services.AddSingleton<IMatchEventRepository, MatchEventRepository>();
 builder.Services.AddSingleton<IFeatureFlagRepository, FeatureFlagRepository>();
-builder.Services.AddSingleton<IMatchesRepository, MongoMatchesRepository>();
+builder.Services.AddSingleton<IMatchesRepository>(x => new ProxyMatchesRepository(
+    new MongoMatchesRepository(x.GetRequiredService<IMongoDatabase>()),
+    new PostgresMatchesRepository(x.GetRequiredService<IPostgres>()),
+    x.GetRequiredService<IFeatureFlagRepository>(),
+    x.GetRequiredService<ILogger<ProxyMatchesRepository>>()
+));
 builder.Services.AddHostedService<FeatureFlagStartupReporter>();
 
 
