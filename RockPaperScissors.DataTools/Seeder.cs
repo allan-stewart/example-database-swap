@@ -4,7 +4,11 @@ using RockPaperScissors.Api.Repositories;
 
 namespace RockPaperScissors.DataTools;
 
-public class Seeder(IMongoDatabase mongo, IMatchEventRepository matchEventRepository, IFeatureFlagRepository featureFlagRepository)
+public class Seeder(
+    IMongoDatabase mongo,
+    PostgresMatchesRepository matchesRepository,
+    IMatchEventRepository matchEventRepository,
+    IFeatureFlagRepository featureFlagRepository)
 {
     public async Task RunAsync()
     {
@@ -15,10 +19,9 @@ public class Seeder(IMongoDatabase mongo, IMatchEventRepository matchEventReposi
         }
         Console.WriteLine($"Seeded {SeedData.Players.Count} players.");
 
-        var matchCollection = mongo.GetCollection<Match>("matches");
         foreach (var match in SeedData.Matches)
         {
-            await matchCollection.ReplaceOneAsync(m => m.MatchId == match.MatchId, match, new ReplaceOptions { IsUpsert = true });
+            await matchesRepository.UpsertMatchAsync(match);
         }
         Console.WriteLine($"Seeded {SeedData.Matches.Count} matches.");
 
