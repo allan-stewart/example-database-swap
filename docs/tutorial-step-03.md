@@ -53,6 +53,15 @@ In our case, our code will act as proxy between the two database implementations
 We'll use feature flags to control which databases are in use.
 
 
+## The _Parallel Run_ Pattern
+
+This pattern involves running a legacy process in parallel with a new process.
+We will invoke this as we write data to the old database (Mongo)
+along with the new database (Postgres).
+
+When invoking this pattern with database writes, it is sometimes called _dual writes._
+
+
 ## Create the Decorator Proxy
 
 We can initially scaffold the proxy by forwarding everything to the Mongo repository:
@@ -104,8 +113,8 @@ throws exceptions for every method, because we're not touching that repository y
 
 ## Gate Postgres Writes
 
-Next we will update the our insert (write) method so when a feature flag is turned on,
-we will try to also write the match to postgres and log any exceptions.
+Next we will update the our insert (write) method so when a `write-matches-to-postgres`
+feature flag is enabled, we will try to also write the match to postgres and log any exceptions.
 
 ```csharp
     private static readonly TimeSpan PostgresTimeout = TimeSpan.FromSeconds(2);
@@ -118,7 +127,8 @@ we will try to also write the match to postgres and log any exceptions.
         {
             try {
                 await postgres.InsertMatchAsync(match).WaitAsync(PostgresTimeout);
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 logger.LogWarning(e, "Error writing to postgres");
             }

@@ -11,7 +11,27 @@ public class ProxyMatchesRepository(
 
     public async Task<bool> DoesMatchExistAsync(Guid matchId)
     {
-        return await mongo.DoesMatchExistAsync(matchId);
+        var mongoResult = await mongo.DoesMatchExistAsync(matchId);
+
+        if (await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
+        {
+            try
+            {
+                var postgresResult = await postgres.DoesMatchExistAsync(matchId).WaitAsync(PostgresTimeout);
+                if (mongoResult != postgresResult)
+                {
+                    logger.LogWarning(
+                        "Shadow read mismatch for DoesMatchExistAsync({matchId}): mongo={mongoResult}, postgres={postgresResult}",
+                        matchId, mongoResult, postgresResult);
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Error reading from postgres");
+            }
+        }
+
+        return mongoResult;
     }
 
     public async Task InsertMatchAsync(Match match)
@@ -22,7 +42,8 @@ public class ProxyMatchesRepository(
         {
             try {
                 await postgres.InsertMatchAsync(match).WaitAsync(PostgresTimeout);
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 logger.LogWarning(e, "Error writing to postgres");
             }
@@ -31,11 +52,111 @@ public class ProxyMatchesRepository(
 
     public async Task<Match?> LoadMatchByIdAsync(Guid matchId)
     {
-        return await mongo.LoadMatchByIdAsync(matchId);
+        var mongoMatch = await mongo.LoadMatchByIdAsync(matchId);
+
+        if (await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
+        {
+            try
+            {
+                var postgresMatch = await postgres.LoadMatchByIdAsync(matchId).WaitAsync(PostgresTimeout);
+                LogDifferences(mongoMatch, postgresMatch);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Error reading from postgres");
+            }
+        }
+
+        return mongoMatch;
     }
 
     public async Task<long> LoadWinCountForPlayerAsync(Guid playerId, DateTimeOffset? from, DateTimeOffset? to)
     {
-        return await mongo.LoadWinCountForPlayerAsync(playerId, from, to);
+        var mongoResult = await mongo.LoadWinCountForPlayerAsync(playerId, from, to);
+
+        if (await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
+        {
+            try
+            {
+                var postgresResult = await postgres.LoadWinCountForPlayerAsync(playerId, from, to).WaitAsync(PostgresTimeout);
+                if (mongoResult != postgresResult)
+                {
+                    logger.LogWarning(
+                        "Shadow read mismatch for LoadWinCountForPlayerAsync({playerId}, {from}, {to}): mongo={mongoResult}, postgres={postgresResult}",
+                        playerId, from, to, mongoResult, postgresResult);
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Error reading from postgres");
+            }
+        }
+
+        return mongoResult;
+    }
+
+    private void LogDifferences(Match? mongoMatch, Match? postgresMatch)
+    {
+        if (mongoMatch == null || postgresMatch == null)
+        {
+            if (mongoMatch != null)
+            {
+                logger.LogWarning(
+                    "Shadow read mismatch for {matchId}: mongo returned an object but postgres returned null",
+                    mongoMatch.MatchId);
+            }
+            if (postgresMatch != null)
+            {
+                logger.LogWarning(
+                    "Shadow read mismatch for {matchId}: mongo returned null but postgres returned an object",
+                    postgresMatch.MatchId);
+            }
+            return;
+        }
+
+        if (mongoMatch.MatchId != postgresMatch.MatchId)
+        {
+            LogDifference(mongoMatch.MatchId, "MatchId", mongoMatch.MatchId, postgresMatch.MatchId);
+        }
+
+        if (mongoMatch.WinnerPlayerId != postgresMatch.WinnerPlayerId)
+        {
+            LogDifference(mongoMatch.MatchId, "WinnerPlayerId", mongoMatch.WinnerPlayerId, postgresMatch.WinnerPlayerId);
+        }
+
+        if (mongoMatch.LoserPlayerId != postgresMatch.LoserPlayerId)
+        {
+            LogDifference(mongoMatch.MatchId, "LoserPlayerId", mongoMatch.LoserPlayerId, postgresMatch.LoserPlayerId);
+        }
+
+        if (mongoMatch.BestOf != postgresMatch.BestOf)
+        {
+            LogDifference(mongoMatch.MatchId, "BestOf", mongoMatch.BestOf, postgresMatch.BestOf);
+        }
+
+        if (mongoMatch.WinnerWins != postgresMatch.WinnerWins)
+        {
+            LogDifference(mongoMatch.MatchId, "WinnerWins", mongoMatch.WinnerWins, postgresMatch.WinnerWins);
+        }
+
+        if (mongoMatch.LoserWins != postgresMatch.LoserWins)
+        {
+            LogDifference(mongoMatch.MatchId, "LoserWins", mongoMatch.LoserWins, postgresMatch.LoserWins);
+        }
+
+        if (TruncateToSecond(mongoMatch.RecordedAt) != TruncateToSecond(postgresMatch.RecordedAt))
+        {
+            LogDifference(mongoMatch.MatchId, "RecordedAt", $"{mongoMatch.RecordedAt:O}", $"{postgresMatch.RecordedAt:O}");
+        }
+    }
+
+    private static DateTimeOffset TruncateToSecond(DateTimeOffset value) =>
+        new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, value.Offset);
+
+    private void LogDifference(Guid matchId, string field, object? mongoValue, object? postgresValue)
+    {
+        logger.LogWarning(
+            "Shadow read mismatch for match {MatchId} on {Field}: mongo={MongoValue}, postgres={PostgresValue}",
+            matchId, field, mongoValue, postgresValue);
     }
 }
