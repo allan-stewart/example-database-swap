@@ -12,8 +12,9 @@ public class ProxyMatchesRepository(
     public async Task<bool> DoesMatchExistAsync(Guid matchId)
     {
         var mongoResult = await mongo.DoesMatchExistAsync(matchId);
+        var usePostgresMatches = await featureFlagRepository.IsEnabledAsync("use-postgres-matches");
 
-        if (await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
+        if (usePostgresMatches || await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
         {
             try
             {
@@ -23,6 +24,11 @@ public class ProxyMatchesRepository(
                     logger.LogWarning(
                         "Shadow read mismatch for DoesMatchExistAsync({matchId}): mongo={mongoResult}, postgres={postgresResult}",
                         matchId, mongoResult, postgresResult);
+                }
+
+                if (usePostgresMatches)
+                {
+                    return postgresResult;
                 }
             }
             catch (Exception e)
@@ -53,13 +59,19 @@ public class ProxyMatchesRepository(
     public async Task<Match?> LoadMatchByIdAsync(Guid matchId)
     {
         var mongoMatch = await mongo.LoadMatchByIdAsync(matchId);
+        var usePostgresMatches = await featureFlagRepository.IsEnabledAsync("use-postgres-matches");
 
-        if (await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
+        if (usePostgresMatches || await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
         {
             try
             {
                 var postgresMatch = await postgres.LoadMatchByIdAsync(matchId).WaitAsync(PostgresTimeout);
                 LogDifferences(mongoMatch, postgresMatch);
+
+                if (usePostgresMatches)
+                {
+                    return postgresMatch;
+                }
             }
             catch (Exception e)
             {
@@ -73,8 +85,9 @@ public class ProxyMatchesRepository(
     public async Task<long> LoadWinCountForPlayerAsync(Guid playerId, DateTimeOffset? from, DateTimeOffset? to)
     {
         var mongoResult = await mongo.LoadWinCountForPlayerAsync(playerId, from, to);
+        var usePostgresMatches = await featureFlagRepository.IsEnabledAsync("use-postgres-matches");
 
-        if (await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
+        if (usePostgresMatches || await featureFlagRepository.IsEnabledAsync("read-matches-from-postgres"))
         {
             try
             {
@@ -84,6 +97,11 @@ public class ProxyMatchesRepository(
                     logger.LogWarning(
                         "Shadow read mismatch for LoadWinCountForPlayerAsync({playerId}, {from}, {to}): mongo={mongoResult}, postgres={postgresResult}",
                         playerId, from, to, mongoResult, postgresResult);
+                }
+
+                if (usePostgresMatches)
+                {
+                    return postgresResult;
                 }
             }
             catch (Exception e)
