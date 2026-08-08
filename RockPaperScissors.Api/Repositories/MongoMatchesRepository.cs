@@ -36,4 +36,17 @@ public class MongoMatchesRepository(IMongoDatabase database) : IMatchesRepositor
 
         return await matchCollection.CountDocumentsAsync(filter);
     }
+
+    public async Task<List<Match>> LoadMatchesAfterAsync(Guid? afterMatchId, int limit)
+    {
+        var filter = afterMatchId is null
+            ? FilterDefinition<Match>.Empty
+            : Builders<Match>.Filter.Gt(m => m.MatchId, afterMatchId.Value);
+
+        return await matchCollection
+            .Find(filter)
+            .SortBy(m => m.MatchId)
+            .Limit(limit)
+            .ToListAsync();
+    }
 }

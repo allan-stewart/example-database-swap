@@ -1,6 +1,6 @@
 # Tutorial - Step 3
 
-The goal for this step is to create a `ProxyMatchesRepository` which forwards
+In this step the goal is to create a `ProxyMatchesRepository` which forwards
 all of the read calls to the Mongo repository and can safely write data to
 _both_ the Mongo and Postgres repositories.
 

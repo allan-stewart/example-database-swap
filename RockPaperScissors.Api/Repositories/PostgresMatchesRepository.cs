@@ -12,6 +12,20 @@ public class PostgresMatchesRepository(IPostgres postgres) : IMatchesRepository
         await postgres.ExecuteAsync(sql, match);
     }
 
+    public async Task UpsertMatchAsync(Match match)
+    {
+        var sql = "INSERT INTO matches (match_id, winner_player_id, loser_player_id, best_of, winner_wins, loser_wins, recorded_at) " +
+            "VALUES (@MatchId, @WinnerPlayerId, @LoserPlayerId, @BestOf, @WinnerWins, @LoserWins, @RecordedAt) " +
+            "ON CONFLICT (match_id) DO UPDATE SET " +
+            "winner_player_id = EXCLUDED.winner_player_id, " +
+            "loser_player_id = EXCLUDED.loser_player_id, " +
+            "best_of = EXCLUDED.best_of, " +
+            "winner_wins = EXCLUDED.winner_wins, " +
+            "loser_wins = EXCLUDED.loser_wins, " +
+            "recorded_at = EXCLUDED.recorded_at";
+        await postgres.ExecuteAsync(sql, match);
+    }
+
     public async Task<Match?> LoadMatchByIdAsync(Guid matchId)
     {
         var sql = "SELECT match_id, winner_player_id, loser_player_id, best_of, winner_wins, loser_wins, recorded_at " +
