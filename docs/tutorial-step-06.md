@@ -9,6 +9,15 @@ The shadow read comparisons have built up our confidence that our
 But we'll still use a feature flag just to be safe.
 
 
+## _Strangler Fig_ Pattern
+
+All of our work so far has been supported by the existing Mongo database implementation.
+This is how the Strangler Fig pattern works: it lets us build upon an existing system
+until we're ready to phase out the old with the new.
+
+This is the point where our new system will start to stand on its own.
+
+
 ## Return the Postgres Results
 
 Update the `ProxyMatchesRepository` so that when a `use-postgres-matches` flag
@@ -81,3 +90,8 @@ to switch back to Mongo data until we can sort out the problems.
 But if we've done our due diligence with the previous steps,
 it is unlikely that we'll have a problem.
 This is our last chance to verify that before we drop Mongo completely.
+
+
+## Next Step
+
+[Stop writing to Mongo and clean up](./tutorial-step-07.md).

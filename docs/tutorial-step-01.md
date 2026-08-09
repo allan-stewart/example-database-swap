@@ -4,10 +4,18 @@ Our first goal is to extract all the existing MongoDB code
 for accessing our stored `Match` data into a `MongoMatchesRepository`.
 This decouples the database logic from the rest of the application.
 
-A closely-related second goal is to introduce a desired interface (or facade)
+Then we can introduce a desired interface (or facade)
 that abstracts the contract from the implementation.
-This provides the hook which we can use later to "branch by abstraction"
-&mdash; a pattern for changing code by swapping one implementation for another.
+
+
+## _Branch by Abstraction_ Pattern
+
+When using this pattern, we introduce an abstraction (in this case a C# interface)
+which in front of the code we wish to replace.
+Then we change the client code to use this abstraction which lets
+us replace it with a different implementation later.
+
+This is a powerful and useful pattern for making changes to a codebase.
 
 
 ## Creating the Repository
@@ -167,3 +175,8 @@ Notice that as we move the database-specific code into the repository,
 we're encapsulating logic that was otherwise scattered across the code.
 In a lot of projects SQL or ORM code gets smeared across many files,
 conflating actual business logic with database access logic.
+
+
+## Next Step
+
+[Create a Postgres table and repository](./tutorial-step-02.md).

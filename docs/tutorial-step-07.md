@@ -47,3 +47,12 @@ Follow that up with deletes in the Api project:
   (if you didn't decide to use in in the seeder above).
 
 It is also good hygiene to remove the now-unused feature flags.
+
+
+## Congratulations!
+
+You've finished the tutorial!
+
+If you're up for the challenge, you can adapt what you've learned so far to migrate
+`Player` data to Postgres and remove Mongo completely.
+Or reverse the transition, and move everything from Postgres to Mongo.

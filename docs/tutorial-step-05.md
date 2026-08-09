@@ -185,3 +185,8 @@ This time you should see some warnings during the migration.
 
 Uncomment the line and turn the feature flag back on.
 Then you can run the migration again to clean up those matches.
+
+
+## Next Step
+
+[Use Postgres results](./tutorial-step-06.md).

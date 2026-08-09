@@ -197,3 +197,8 @@ In the `PostgresMatchesRepository.InsertMatchAsync` try adding one or both of th
 * `throw new NotImplementedException();`
 
 You should see errors in the console, but the simulated traffic will continue on with minimal slowing.
+
+
+## Next Step
+
+[Shadow read from Postgres and log differences](./tutorial-step-04.md).

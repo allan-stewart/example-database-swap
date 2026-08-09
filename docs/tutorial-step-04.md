@@ -202,3 +202,8 @@ the two databases.
 We can rework our Postgres code or adjust the table as necessary.
 In the worst case, we can turn off the feature flags, drop the table
 and try again!
+
+
+## Next Step
+
+[Migrate and check all data from Mongo to Postgres](./tutorial-step-05.md).

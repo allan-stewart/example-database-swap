@@ -73,3 +73,8 @@ In fact, it would be fine if all the methods just contained `throw new NotImplem
 
 In a project that contains integration tests, you could verify that this dark code works correctly.
 Or at least that it can load and save data to the database table.
+
+
+## Next Step
+
+[Create a proxy repository that dual-writes to Mongo and Postgres](./tutorial-step-03.md).
