@@ -18,6 +18,17 @@ us replace it with a different implementation later.
 This is a powerful and useful pattern for making changes to a codebase.
 
 
+## _Repository_ Pattern
+
+There are multiple flavors or definitions of this pattern.
+For this codebase, we're using the concepts from _Domain Driven Design_
+where a repository is the storage for an entity and has bespoke methods
+based on the domain, rather than being a generic data access layer.
+
+This codebase already has some examples of repositories we can look at:
+`FeatureFlagRepository` and `MatchEventRepository`. 
+
+
 ## Creating the Repository
 
 We can start with an `IMatchesRepository.cs` that is just an empty interface:

@@ -136,6 +136,12 @@ using Microsoft.Extensions.Logging;
     }
 ```
 
+### Handling Deletes
+
+In this example codebase, we do not have an endpoint allowing Api users to delete matches.
+If we did allow deletion, that would make the migration a little more complicated because
+we'd need to verify that there are not any entries in Postgres that were deleted from Mongo.
+
 
 ## Run the Migration
 
