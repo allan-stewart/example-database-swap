@@ -1,9 +1,10 @@
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Npgsql;
 
 namespace RockPaperScissors.DataTools;
 
-public class Teardown(IMongoDatabase mongo, NpgsqlDataSource postgres)
+public class Teardown(IMongoDatabase mongo, NpgsqlDataSource postgres, ILogger<Teardown> logger)
 {
     public async Task RunAsync()
     {
@@ -11,7 +12,7 @@ public class Teardown(IMongoDatabase mongo, NpgsqlDataSource postgres)
         foreach (var collectionName in collectionNames)
         {
             await mongo.DropCollectionAsync(collectionName);
-            Console.WriteLine($"Dropped mongo collection {collectionName}");
+            logger.LogInformation("Dropped mongo collection {CollectionName}", collectionName);
         }
 
         await using var connection = await postgres.OpenConnectionAsync();
@@ -31,9 +32,12 @@ public class Teardown(IMongoDatabase mongo, NpgsqlDataSource postgres)
         {
             await using var drop = new NpgsqlCommand($"DROP TABLE IF EXISTS \"{tableName}\" CASCADE", connection);
             await drop.ExecuteNonQueryAsync();
-            Console.WriteLine($"Dropped postgres table {tableName}");
+            logger.LogInformation("Dropped postgres table {TableName}", tableName);
         }
 
-        Console.WriteLine($"Teardown complete: {collectionNames.Count} collection(s), {tableNames.Count} table(s).");
+        logger.LogInformation(
+            "Teardown complete: {CollectionCount} collection(s), {TableCount} table(s).",
+            collectionNames.Count,
+            tableNames.Count);
     }
 }

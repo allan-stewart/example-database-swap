@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace RockPaperScissors.DataTools;
 
-public class Migrator(NpgsqlDataSource postgres)
+public class Migrator(NpgsqlDataSource postgres, ILogger<Migrator> logger)
 {
     public async Task RunAsync()
     {
@@ -53,10 +54,17 @@ public class Migrator(NpgsqlDataSource postgres)
             }
             await transaction.CommitAsync();
 
-            Console.WriteLine($"Applied {filename}");
+            logger.LogInformation("Applied {Filename}", filename);
         }
 
-        Console.WriteLine(pending.Count == 0 ? "No pending migrations." : $"Applied {pending.Count} migration(s).");
+        if (pending.Count == 0)
+        {
+            logger.LogInformation("No pending migrations.");
+        }
+        else
+        {
+            logger.LogInformation("Applied {Count} migration(s).", pending.Count);
+        }
     }
 
     private static string FindScriptsDirectory()

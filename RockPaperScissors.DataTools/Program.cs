@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Npgsql;
 using RockPaperScissors.Api.Data;
@@ -13,6 +14,8 @@ var apiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL")
     ?? "http://localhost:5269";
 
 var services = new ServiceCollection();
+
+services.AddLogging(logging => logging.AddConsole());
 
 var mongoUrl = new MongoUrl(mongoConnection);
 services.AddSingleton<IMongoClient>(new MongoClient(mongoUrl));
