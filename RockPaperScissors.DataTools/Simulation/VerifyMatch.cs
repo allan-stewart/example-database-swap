@@ -21,6 +21,39 @@ public class VerifyMatch(HttpClient apiClient, MatchTracker matchTracker, Status
         return await VerifyAsync("dynamic", expected);
     }
 
+    public async Task<bool> VerifyStaticMatchThrows()
+    {
+        var match = matchTracker.GetRandomStaticMatch();
+        var expected = SeedData.MatchEvents.Where(e => e.MatchId == match.MatchId).ToList();
+
+        var response = await apiClient.GetAsync($"/matches/{match.MatchId}/throws");
+        if (!response.IsSuccessStatusCode)
+        {
+            statusConsole.WriteLine($"Verification error: GET /matches/{match.MatchId}/throws returned {(int)response.StatusCode}.");
+            return true;
+        }
+        var actual = await response.Content.ReadFromJsonAsync<List<MatchEvent>>() ?? [];
+
+        var errors = new List<string>();
+        if (actual.Count != expected.Count)
+        {
+            errors.Add($"throw count expected {expected.Count}, got {actual.Count}");
+        }
+        var expectedKeys = expected.Select(Key).OrderBy(key => key).ToList();
+        var actualKeys = actual.Select(Key).OrderBy(key => key).ToList();
+        if (!expectedKeys.SequenceEqual(actualKeys))
+        {
+            errors.Add($"throws mismatch: expected [{string.Join(", ", expectedKeys)}], got [{string.Join(", ", actualKeys)}]");
+        }
+        if (errors.Count > 0)
+        {
+            statusConsole.WriteLine($"Verification error for static match throws {match.MatchId}: {string.Join("; ", errors)}");
+        }
+        return true;
+
+        static string Key(MatchEvent matchEvent) => $"{matchEvent.ThrowIndex}:{matchEvent.PlayerId}:{matchEvent.Thrown}";
+    }
+
     private async Task<bool> VerifyAsync(string kind, Match expected)
     {
         var response = await apiClient.GetAsync($"/matches/{expected.MatchId}");
