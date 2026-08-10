@@ -7,7 +7,7 @@ public class SchemaApplicator(NpgsqlDataSource postgres, ILogger<SchemaApplicato
 {
     public async Task RunAsync()
     {
-        var scriptsDirectory = FindScriptsDirectory();
+        var scriptsDirectory = Path.Combine(AppContext.BaseDirectory, "schema-changes", "postgres");
         await using var connection = await postgres.OpenConnectionAsync();
 
         await using (var create = new NpgsqlCommand(
@@ -65,20 +65,5 @@ public class SchemaApplicator(NpgsqlDataSource postgres, ILogger<SchemaApplicato
         {
             logger.LogInformation("Applied {Count} schema change(s).", pending.Count);
         }
-    }
-
-    private static string FindScriptsDirectory()
-    {
-        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
-        while (directory is not null)
-        {
-            var candidate = Path.Combine(directory.FullName, "schema-changes", "postgres");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-            directory = directory.Parent;
-        }
-        throw new InvalidOperationException("Could not find a schema-changes/postgres directory in the current directory or any parent.");
     }
 }
