@@ -57,6 +57,7 @@ to host our new migration script.
 In that project, create a `MatchMigrator.cs` file:
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using RockPaperScissors.Api.Repositories;
 
 namespace RockPaperScissors.DataTools;
@@ -64,13 +65,14 @@ namespace RockPaperScissors.DataTools;
 public class MatchMigrator(
     MongoMatchesRepository mongo,
     PostgresMatchesRepository postgres,
-    ProxyMatchesRepository proxy)
+    ProxyMatchesRepository proxy,
+    ILogger<MatchMigrator> logger)
 {
     private const int PageSize = 100;
 
     public async Task RunAsync()
     {
-        Console.WriteLine("Starting match migration from mongo to postgres...");
+        logger.LogInformation("Starting match migration from mongo to postgres...");
 
         var migrated = 0;
         Guid? cursor = null;
@@ -90,10 +92,10 @@ public class MatchMigrator(
 
             migrated += page.Count;
             cursor = page.Last().MatchId;
-            Console.WriteLine($"Migrated {migrated} matches so far (cursor: {cursor}).");
+            logger.LogInformation("Migrated {Migrated} matches so far (cursor: {Cursor}).", migrated, cursor);
         }
 
-        Console.WriteLine($"Match migration complete: {migrated} matches migrated.");
+        logger.LogInformation("Match migration complete: {Migrated} matches migrated.", migrated);
     }
 }
 ```
@@ -106,35 +108,28 @@ we can compare them for any inconsistencies.
 > required for the migration (load all and upsert), you can simplify the migration
 > script to just use the proxy.
 
-Now wire it into the `Program.cs` file:
+Now wire it into the `Program.cs` file.
+The DataTools project already uses dependency injection, so we just register the
+matches repositories and the migrator alongside the other services:
 
 ```csharp
-using Microsoft.Extensions.Logging;
-    
-    // ... other cases ...
-
-    case "migrate-matches":
-    {
-        var mongoUrl = new MongoUrl(mongoConnection);
-        var mongoDatabase = new MongoClient(mongoUrl).GetDatabase(mongoUrl.DatabaseName ?? "rockpaperscissors");
-        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        var postgresGateway = new DapperPostgres(postgres);
-
-        var mongoRepository = new MongoMatchesRepository(mongoDatabase);
-        var postgresRepository = new PostgresMatchesRepository(postgresGateway);
-        var featureFlags = new FeatureFlagRepository(postgresGateway);
-
-        using var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
-        var proxyRepository = new ProxyMatchesRepository(
-            mongoRepository,
-            postgresRepository,
-            featureFlags,
-            loggerFactory.CreateLogger<ProxyMatchesRepository>());
-
-        await new MatchMigrator(mongoRepository, postgresRepository, proxyRepository).RunAsync();
-        return 0;
-    }
+services.AddSingleton<MongoMatchesRepository>();
+services.AddSingleton<PostgresMatchesRepository>();
+services.AddSingleton<ProxyMatchesRepository>();
+services.AddSingleton<MatchMigrator>();
 ```
+
+Then add a case that resolves the migrator and runs it:
+
+```csharp
+    case "migrate-matches":
+        await provider.GetRequiredService<MatchMigrator>().RunAsync();
+```
+
+The container already knows how to build the Mongo database, the Postgres data
+source, the feature flag repository, and a console logger, so it constructs the
+proxy and the migrator (with all their dependencies) for us &mdash; no manual
+wiring required.
 
 ### Handling Deletes
 

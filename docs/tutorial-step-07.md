@@ -37,8 +37,12 @@ Just have the Seeder use the `UpsertMatchAsync` method to write the seed data to
 
 ## Clean Up
 
-We can now remove our `migrate-matches` script from the DataTools `Program.cs`
-and then delete the unused `MatchMigrator.cs` file.
+We can now remove the `migrate-matches` command from the DataTools `Program.cs`.
+Delete the `case "migrate-matches"` along with the service registrations we added
+for it (`MatchMigrator`, `ProxyMatchesRepository`, and `MongoMatchesRepository`),
+then delete the unused `MatchMigrator.cs` file.
+(You can also drop the `PostgresMatchesRepository` registration unless you wired it
+into the seeder in the optional step above.)
 
 Follow that up with deletes in the Api project:
 * `ProxyMatchesRepository.cs`
@@ -46,7 +50,15 @@ Follow that up with deletes in the Api project:
 * Remove the `PostgresMatchesRepository.UpsertMatchAsync` method
   (if you didn't decide to use in in the seeder above).
 
-It is also good hygiene to remove the now-unused feature flags.
+It is also good hygiene to remove the now-unused feature flags,
+which you can do with the DataTools `delete-flag` command:
+
+```bash
+cd RockPaperScissors.DataTools
+dotnet run delete-flag write-matches-to-postgres
+dotnet run delete-flag read-matches-from-postgres
+dotnet run delete-flag use-postgres-matches
+```
 
 
 ## Congratulations!
