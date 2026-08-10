@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace RockPaperScissors.DataTools;
 
-public class Migrator(NpgsqlDataSource postgres, ILogger<Migrator> logger)
+public class SchemaApplicator(NpgsqlDataSource postgres, ILogger<SchemaApplicator> logger)
 {
     public async Task RunAsync()
     {
@@ -12,7 +12,7 @@ public class Migrator(NpgsqlDataSource postgres, ILogger<Migrator> logger)
 
         await using (var create = new NpgsqlCommand(
             """
-            CREATE TABLE IF NOT EXISTS schema_migrations (
+            CREATE TABLE IF NOT EXISTS schema_changes (
                 filename TEXT PRIMARY KEY,
                 applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
             )
@@ -22,7 +22,7 @@ public class Migrator(NpgsqlDataSource postgres, ILogger<Migrator> logger)
         }
 
         var applied = new HashSet<string>();
-        await using (var select = new NpgsqlCommand("SELECT filename FROM schema_migrations", connection))
+        await using (var select = new NpgsqlCommand("SELECT filename FROM schema_changes", connection))
         await using (var reader = await select.ExecuteReaderAsync())
         {
             while (await reader.ReadAsync())
@@ -47,7 +47,7 @@ public class Migrator(NpgsqlDataSource postgres, ILogger<Migrator> logger)
                 await run.ExecuteNonQueryAsync();
             }
             await using (var record = new NpgsqlCommand(
-                "INSERT INTO schema_migrations (filename) VALUES (@filename)", connection, transaction))
+                "INSERT INTO schema_changes (filename) VALUES (@filename)", connection, transaction))
             {
                 record.Parameters.AddWithValue("filename", filename);
                 await record.ExecuteNonQueryAsync();
@@ -59,11 +59,11 @@ public class Migrator(NpgsqlDataSource postgres, ILogger<Migrator> logger)
 
         if (pending.Count == 0)
         {
-            logger.LogInformation("No pending migrations.");
+            logger.LogInformation("No pending schema changes.");
         }
         else
         {
-            logger.LogInformation("Applied {Count} migration(s).", pending.Count);
+            logger.LogInformation("Applied {Count} schema change(s).", pending.Count);
         }
     }
 
@@ -72,13 +72,13 @@ public class Migrator(NpgsqlDataSource postgres, ILogger<Migrator> logger)
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (directory is not null)
         {
-            var candidate = Path.Combine(directory.FullName, "database-migrations", "sql");
+            var candidate = Path.Combine(directory.FullName, "schema-changes", "postgres");
             if (Directory.Exists(candidate))
             {
                 return candidate;
             }
             directory = directory.Parent;
         }
-        throw new InvalidOperationException("Could not find a database-migrations/sql directory in the current directory or any parent.");
+        throw new InvalidOperationException("Could not find a schema-changes/postgres directory in the current directory or any parent.");
     }
 }

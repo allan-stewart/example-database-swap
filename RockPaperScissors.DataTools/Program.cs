@@ -29,7 +29,7 @@ services.AddSingleton<IFeatureFlagRepository, FeatureFlagRepository>();
 
 services.AddSingleton(_ => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
 
-services.AddSingleton<Migrator>();
+services.AddSingleton<SchemaApplicator>();
 services.AddSingleton<Seeder>();
 services.AddSingleton<Teardown>();
 services.AddSingleton<SimulateTraffic>();
@@ -38,8 +38,8 @@ await using var provider = services.BuildServiceProvider();
 
 switch (args.FirstOrDefault())
 {
-    case "migrate":
-        await provider.GetRequiredService<Migrator>().RunAsync();
+    case "apply-schema-changes":
+        await provider.GetRequiredService<SchemaApplicator>().RunAsync();
         return 0;
     case "seed":
         await provider.GetRequiredService<Seeder>().RunAsync();
@@ -77,6 +77,6 @@ switch (args.FirstOrDefault())
         return 0;
     }
     default:
-        Console.Error.WriteLine("Usage: dotnet run -- <migrate|seed|teardown|simulate-traffic|enable-flag <name>|disable-flag <name>|delete-flag <name>>");
+        Console.Error.WriteLine("Usage: dotnet run -- <apply-schema-changes|seed|teardown|simulate-traffic|enable-flag <name>|disable-flag <name>|delete-flag <name>>");
         return 1;
 }

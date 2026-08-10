@@ -11,8 +11,8 @@ Dark code is generally low risk and safe to deploy to production.
 ## Creating the Table
 
 This project already has a mechanism for postgres schema changes.
-We just need to add a `.sql` file to the `database-migrations/sql/` directory.
-We prefix each new migration with a number so they are run in order.
+We just need to add a `.sql` file to the `RockPaperScissors.DataTools/schema-changes/postgres/` directory.
+We prefix each new schema change with a number so they are run in order.
 
 Here is an example for a `003-create-matches.sql` file:
 
@@ -30,11 +30,11 @@ CREATE TABLE IF NOT EXISTS matches (
 CREATE INDEX IF NOT EXISTS idx_matches_winner_player_id ON matches (winner_player_id, recorded_at);
 ```
 
-Then you can use the DataTools `migrate` command to apply the migration and create the table:
+Then you can use the DataTools `apply-schema-changes` command to apply the change and create the table:
 
 ```bash
 cd RockPaperScissors.DataTools
-dotnet run migrate
+dotnet run apply-schema-changes
 ```
 
 
