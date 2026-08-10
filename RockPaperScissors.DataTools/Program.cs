@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Npgsql;
 using RockPaperScissors.Api.Data;
@@ -11,37 +12,41 @@ var postgresConnection = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION
 var apiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL")
     ?? "http://localhost:5269";
 
+var services = new ServiceCollection();
+
+var mongoUrl = new MongoUrl(mongoConnection);
+services.AddSingleton<IMongoClient>(new MongoClient(mongoUrl));
+services.AddSingleton(sp =>
+    sp.GetRequiredService<IMongoClient>().GetDatabase(mongoUrl.DatabaseName ?? "rockpaperscissors"));
+
+services.AddSingleton(_ => NpgsqlDataSource.Create(postgresConnection));
+services.AddSingleton<IPostgres, DapperPostgres>();
+services.AddSingleton<IMatchEventRepository, MatchEventRepository>();
+services.AddSingleton<IFeatureFlagRepository, FeatureFlagRepository>();
+
+services.AddSingleton(_ => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
+
+services.AddSingleton<Migrator>();
+services.AddSingleton<Seeder>();
+services.AddSingleton<Teardown>();
+services.AddSingleton<SimulateTraffic>();
+
+await using var provider = services.BuildServiceProvider();
+
 switch (args.FirstOrDefault())
 {
     case "migrate":
-    {
-        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new Migrator(postgres).RunAsync();
+        await provider.GetRequiredService<Migrator>().RunAsync();
         return 0;
-    }
     case "seed":
-    {
-        var mongoUrl = new MongoUrl(mongoConnection);
-        var mongo = new MongoClient(mongoUrl).GetDatabase(mongoUrl.DatabaseName ?? "rockpaperscissors");
-        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        var postgresGateway = new DapperPostgres(postgres);
-        await new Seeder(mongo, new MatchEventRepository(postgresGateway), new FeatureFlagRepository(postgresGateway)).RunAsync();
+        await provider.GetRequiredService<Seeder>().RunAsync();
         return 0;
-    }
     case "teardown":
-    {
-        var mongoUrl = new MongoUrl(mongoConnection);
-        var mongo = new MongoClient(mongoUrl).GetDatabase(mongoUrl.DatabaseName ?? "rockpaperscissors");
-        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new Teardown(mongo, postgres).RunAsync();
+        await provider.GetRequiredService<Teardown>().RunAsync();
         return 0;
-    }
     case "simulate-traffic":
-    {
-        using var apiClient = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
-        await new SimulateTraffic(apiClient).RunAsync();
+        await provider.GetRequiredService<SimulateTraffic>().RunAsync();
         return 0;
-    }
     case "enable-flag":
     case "disable-flag":
     {
@@ -52,8 +57,7 @@ switch (args.FirstOrDefault())
             return 1;
         }
         var enabled = args[0] == "enable-flag";
-        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new FeatureFlagRepository(new DapperPostgres(postgres)).SetAsync(flagName, enabled);
+        await provider.GetRequiredService<IFeatureFlagRepository>().SetAsync(flagName, enabled);
         Console.WriteLine($"{(enabled ? "Enabled" : "Disabled")} flag '{flagName}'.");
         return 0;
     }
@@ -65,8 +69,7 @@ switch (args.FirstOrDefault())
             Console.Error.WriteLine("Usage: dotnet run -- delete-flag <name>");
             return 1;
         }
-        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
-        await new FeatureFlagRepository(new DapperPostgres(postgres)).DeleteAsync(flagName);
+        await provider.GetRequiredService<IFeatureFlagRepository>().DeleteAsync(flagName);
         Console.WriteLine($"Deleted flag '{flagName}'.");
         return 0;
     }
