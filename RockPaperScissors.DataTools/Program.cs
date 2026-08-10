@@ -6,6 +6,9 @@ using RockPaperScissors.Api.Data;
 using RockPaperScissors.Api.Repositories;
 using RockPaperScissors.DataTools;
 
+const int ExitSuccess = 0;
+const int ExitFailure = 1;
+
 var mongoConnection = Environment.GetEnvironmentVariable("MONGO_CONNECTION")
     ?? "mongodb://rps:rps-password@localhost:27017/rockpaperscissors?authSource=admin";
 var postgresConnection = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION")
@@ -40,16 +43,16 @@ switch (args.FirstOrDefault())
 {
     case "apply-schema-changes":
         await provider.GetRequiredService<SchemaApplicator>().RunAsync();
-        return 0;
+        break;
     case "seed":
         await provider.GetRequiredService<Seeder>().RunAsync();
-        return 0;
+        break;
     case "teardown":
         await provider.GetRequiredService<Teardown>().RunAsync();
-        return 0;
+        break;
     case "simulate-traffic":
         await provider.GetRequiredService<SimulateTraffic>().RunAsync();
-        return 0;
+        break;
     case "enable-flag":
     case "disable-flag":
     {
@@ -57,12 +60,12 @@ switch (args.FirstOrDefault())
         if (string.IsNullOrWhiteSpace(flagName))
         {
             Console.Error.WriteLine("Usage: dotnet run -- <enable-flag|disable-flag> <name>");
-            return 1;
+            return ExitFailure;
         }
         var enabled = args[0] == "enable-flag";
         await provider.GetRequiredService<IFeatureFlagRepository>().SetAsync(flagName, enabled);
         Console.WriteLine($"{(enabled ? "Enabled" : "Disabled")} flag '{flagName}'.");
-        return 0;
+        break;
     }
     case "delete-flag":
     {
@@ -70,13 +73,15 @@ switch (args.FirstOrDefault())
         if (string.IsNullOrWhiteSpace(flagName))
         {
             Console.Error.WriteLine("Usage: dotnet run -- delete-flag <name>");
-            return 1;
+            return ExitFailure;
         }
         await provider.GetRequiredService<IFeatureFlagRepository>().DeleteAsync(flagName);
         Console.WriteLine($"Deleted flag '{flagName}'.");
-        return 0;
+        break;
     }
     default:
         Console.Error.WriteLine("Usage: dotnet run -- <apply-schema-changes|seed|teardown|simulate-traffic|enable-flag <name>|disable-flag <name>|delete-flag <name>>");
-        return 1;
+        return ExitFailure;
 }
+
+return ExitSuccess;
