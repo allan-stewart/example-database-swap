@@ -57,7 +57,20 @@ switch (args.FirstOrDefault())
         Console.WriteLine($"{(enabled ? "Enabled" : "Disabled")} flag '{flagName}'.");
         return 0;
     }
+    case "delete-flag":
+    {
+        var flagName = args.ElementAtOrDefault(1);
+        if (string.IsNullOrWhiteSpace(flagName))
+        {
+            Console.Error.WriteLine("Usage: dotnet run -- delete-flag <name>");
+            return 1;
+        }
+        await using var postgres = NpgsqlDataSource.Create(postgresConnection);
+        await new FeatureFlagRepository(new DapperPostgres(postgres)).DeleteAsync(flagName);
+        Console.WriteLine($"Deleted flag '{flagName}'.");
+        return 0;
+    }
     default:
-        Console.Error.WriteLine("Usage: dotnet run -- <migrate|seed|teardown|simulate-traffic|enable-flag <name>|disable-flag <name>>");
+        Console.Error.WriteLine("Usage: dotnet run -- <migrate|seed|teardown|simulate-traffic|enable-flag <name>|disable-flag <name>|delete-flag <name>>");
         return 1;
 }

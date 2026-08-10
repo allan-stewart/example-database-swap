@@ -17,6 +17,12 @@ public class FeatureFlagRepository(IPostgres postgres) : IFeatureFlagRepository
         return postgres.ExecuteAsync(sql, new { name, enabled });
     }
 
+    public Task DeleteAsync(string name)
+    {
+        var sql = "DELETE FROM feature_flags WHERE name = @name";
+        return postgres.ExecuteAsync(sql, new { name });
+    }
+
     public async Task<Dictionary<string, bool>> GetAllAsync()
     {
         var sql = "SELECT name, enabled FROM feature_flags ORDER BY name";

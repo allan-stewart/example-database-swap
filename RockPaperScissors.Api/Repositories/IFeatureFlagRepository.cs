@@ -6,5 +6,7 @@ public interface IFeatureFlagRepository
 
     Task SetAsync(string name, bool enabled);
 
+    Task DeleteAsync(string name);
+
     Task<Dictionary<string, bool>> GetAllAsync();
 }
